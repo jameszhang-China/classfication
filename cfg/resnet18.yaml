@@ -1,0 +1,15 @@
+nc: 10
+
+backbone:
+#[from, repeats, module, args]
+ - [-1, 1, Conv, [64, 7, 2, 3]]
+ - [-1, 1, nn.MaxPool2d, [3, 2, 1]]
+ - [-1, 2, ResNetBasicLayer, [64, 1]]
+ - [-1, 2, ResNetBasicLayer, [128, 2]]
+ - [-1, 2, ResNetBasicLayer, [256, 2]]
+ - [-1, 2, ResNetBasicLayer, [512, 2]]
+
+head:
+ - [-1, 1, nn.AvgPool2d, [7, 1, 0]]
+ - [-1, 1, nn.Flatten, [1]]
+ - [-1, 1, nn.Linear, [512, 10]]

@@ -1,0 +1,36 @@
+#model
+nc: 4
+nc_name: ['cat', 'dog', 'person', 'car']
+
+#data
+imgsz: 224
+batch_size: 32
+mean: [0.0, 0.0, 0.0]
+std: [1.0, 1.0, 1.0]
+
+#path
+train_path: /home/vera/classfication/datasets
+val_path: /home/vera/classfication/datasets
+detect_path: /home/vera/classfication/datasets
+export_path: /home/vera/classfication/models/export
+
+#trainer
+epochs: 10
+lr: 0.001
+weight_decay: 0.0005
+lrf: 0.01
+cos_lr: False
+optimizer: auto
+momentum: 0.9
+warmup_bias_lr: 0.1
+warmup_epochs: 3
+warmup_momentum: 0.8
+nbs: 64
+patience: 10
+amp: True
+compile: False
+ema: True
+fitness_w: [0.0,0.5,0.5]
+
+
+
