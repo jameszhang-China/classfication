@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from libs.utils.utils import setup_model
+from libs.utils.dataset import Dataset
 import tqdm as TQDM
 
 class ClassifierValidator:
@@ -8,21 +9,25 @@ class ClassifierValidator:
         self.model = model
         self.args = args
         self.device = device
+        self.val_loader = Dataset(self.args).get_dataloader(self.args.val_path, self.args.batch_size, mode="val")
     def __call__(self):
         if self.args.compile and hasattr(self.model, "_orig_mod"):
             self.model = self.model._orig_mod 
         self.model = self.model.half() if self.args.amp else self.model.float()
         self.model.eval()
         total_samples = 0
+        top1_correct = 0.0
+        top5_correct = 0.0
         
         with torch.no_grad():
             pbar = TQDM.tqdm(enumerate(self.val_loader), total=len(self.val_loader))
             for i, batch in pbar:
                 images, labels = batch[0].to(self.device), batch[1].to(self.device)
                 
-                with torch.cuda.amp.autocast(self.amp):
+                with torch.cuda.amp.autocast(self.args.amp):
                     preds = self.model(images)
-                top5_indices = torch.topk(preds, k=5, dim=1)[1]
+                outnum = min(self.args.nc, 5)
+                top5_indices = torch.topk(preds, k=outnum, dim=1)[1]
                 top1_correct += torch.topk(preds, k=1, dim=1)[1].squeeze(1).eq(labels).sum().item()
                 labels_expanded = labels.unsqueeze(1).expand_as(top5_indices)
                 top5_correct += top5_indices.eq(labels_expanded).any(dim=1).sum().item()

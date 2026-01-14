@@ -6,11 +6,11 @@ class Exporter:
     def __init__(self, model, args, device='cuda'):
         _, self.model = setup_model(model, args, device)
         self.device = device
+        self.args = args
 
     def export(self):
         if self.args.compile and hasattr(self.model, "_orig_mod"):
             self.model = self.model._orig_mod 
-        self.model = self.model.half() if self.args.amp else self.model.float()
         self.model.eval()
         dummy_input = torch.randn(1, 3, self.args.imgsz, self.args.imgsz).to(self.device)
         
@@ -19,7 +19,7 @@ class Exporter:
             dummy_input,                    # 模型输入
             self.args.export_path + "/model.onnx",                   # 输出文件名
             export_params=True,             # 存储训练好的参数
-            opset_version=11,               # ONNX 算子集版本
+            opset_version=18,               # ONNX 算子集版本
             do_constant_folding=True,       # 是否执行常量折叠优化
             input_names=['input'],          # 输入节点名称
             output_names=['output'],        # 输出节点名称

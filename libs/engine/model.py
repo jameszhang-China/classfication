@@ -13,11 +13,6 @@ from libs.engine.prune import Pruner
 
 class Classification:
     def __init__(self, model: str, device='cuda', hyper=None):
-        if model.endswith(('.pt', '.pth')):
-            self.model = torch.load(model, map_location=device)
-        else:
-            self.model = ClassificationModel(model, device)
-
         if not hyper:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             self.yaml = os.path.join(current_dir, '../../cfg/default.yaml')
@@ -29,6 +24,11 @@ class Classification:
             hyper = yaml.safe_load(f)
 
         self._get_hyper(hyper)
+
+        if model.endswith(('.pt', '.pth')):
+            self.model = torch.load(model, map_location=device, weights_only=False)
+        else:
+            self.model = ClassificationModel(model, self.args, device)
     
     
     def _get_hyper(self, hyper):
@@ -85,8 +85,11 @@ class Classification:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         default_save_dir = os.path.join(current_dir, '../runs/train/default/')
         self.args.save_dir = hyper.get('save_dir', default_save_dir)
-        if os.path.exists(self.args.save_dir) and not self.args.resume:
-            self.args.save_dir = self.args.save_dir[:-1] + '_t/'
+        while True:
+            if os.path.exists(self.args.save_dir) and not self.args.resume:
+                self.args.save_dir = self.args.save_dir[:-1] + '_t/'
+            else:
+                break
 
         # distillation
         self.args.distillation = hyper.get('distillation', False)

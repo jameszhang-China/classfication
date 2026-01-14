@@ -4,7 +4,6 @@ import time
 import torch
 import torch.nn as nn
 from libs.utils.utils import init_seeds, attempt_compile, ModelEMA, EarlyStopping, unwrap_model, setup_model
-from libs.engine.tasker import ClassificationModel
 from libs.utils.dataset import Dataset
 from libs.utils.loss import DistillationLoss, ClassificationLoss, SPARSELoss
 from torch.utils.tensorboard import SummaryWriter
@@ -69,14 +68,13 @@ class Trainer:
 
         optimizers = {"AdamW", "SGD", "auto"}
         name = {x.lower(): x for x in optimizers}.get(name.lower())
-        if name == "AdamW":
+        if name == 'AdamW':
             optimizer = getattr(optim, name, optim.Adam)(g[2], lr=lr, betas=(momentum, 0.999), weight_decay=0.0)
         elif name == "SGD":
             optimizer = optim.SGD(g[2], lr=lr, momentum=momentum, nesterov=True)
         else:
             raise NotImplementedError(
                 f"Optimizer '{name}' not found in list of available optimizers {optimizers}. "
-                "Request support for addition optimizers at https://github.com/ultralytics/ultralytics."
             )
 
         optimizer.add_param_group({"params": g[0], "weight_decay": decay})  # add g0 with weight_decay
@@ -130,10 +128,9 @@ class Trainer:
         self.val_loader = Dataset(self.args).get_dataloader(self.args.val_path, self.args.batch_size, mode="val")
         self.ema = ModelEMA(self.model) if self.args.ema else None
         # amp
-        if self.args.amp:
-            self.scaler = (
-                torch.amp.GradScaler("cuda", enabled=self.args.amp) if TORCH_2_4 else torch.cuda.amp.GradScaler(enabled=self.args.amp)
-            )
+        self.scaler = (
+            torch.amp.GradScaler("cuda", enabled=self.args.amp) if TORCH_2_4 else torch.cuda.amp.GradScaler(enabled=self.args.amp)
+        )
 
         # optimizer
         self.accumulate = max(round(self.args.nbs / self.args.batch_size), 1)  # accumulate loss before optimizing 在 GPU 显存不足、无法设置大批次（batch_size） 时，通过「梯度累积」模拟大批次训练效果，保证训练稳定性和收敛性。
@@ -192,7 +189,8 @@ class Trainer:
                     preds = model(images)
                     loss = self.loss_cls(preds, labels)
                 loss_val += loss.sum().item()
-                top5_indices = torch.topk(preds, k=5, dim=1)[1]
+                outnum = min(self.args.nc, 5)
+                top5_indices = torch.topk(preds, k=outnum, dim=1)[1]
                 top1_correct += torch.topk(preds, k=1, dim=1)[1].squeeze(1).eq(labels).sum().item()
                 labels_expanded = labels.unsqueeze(1).expand_as(top5_indices)
                 top5_correct += top5_indices.eq(labels_expanded).any(dim=1).sum().item()
@@ -213,7 +211,8 @@ class Trainer:
                 "start": self.epoch + 1,
                 "best_fitness": self.best_fitness,
                 # "model": None,
-                "ema": deepcopy(unwrap_model(self.ema.ema)).half(),
+                "ema": deepcopy(unwrap_model(self.ema.ema.to(self.device))).half(),
+                # "ema": (unwrap_model(self.ema.ema.to(self.device))),
                 "updates": self.ema.updates,
                 "optimizer": deepcopy(self.optimizer.state_dict()),
                 "scaler": self.scaler.state_dict(),
@@ -233,7 +232,7 @@ class Trainer:
         while True: # epoch loop
             self.epoch = epoch
             self._model_train() # set model to training mode, freeze BN var and mean if needed
-            print(f"Epoch: {self.epoch} - Training, lr: {self.optimizer.param_groups[0]['lr']:.6f}, momentum: {self.optimizer.param_groups[0].get('momentum', 0):.6f}")
+            print(f"\nEpoch: {self.epoch} - Training, lr: {self.optimizer.param_groups[0]['lr']:.6f}, momentum: {self.optimizer.param_groups[0].get('momentum', 0):.6f}")
             print(f"batch size: {self.args.batch_size}, accumulate: {self.accumulate}, total batch: {nb}")
             epoch_time_start = time.time()
             
@@ -276,6 +275,7 @@ class Trainer:
             v_preds = v_preds.max(1)[1]
             # early stop
             if self.stopper(epoch, self.fitness):
+                print(f"Early stopping at epoch {epoch} with fitness {self.fitness:.4f}")
                 self.stop = True
 
             # SummaryWriter

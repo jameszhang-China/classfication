@@ -1,5 +1,5 @@
 import os
-from tkinter import Image
+from PIL import Image
 import torch
 import torch.nn as nn
 from libs.utils.utils import setup_model
@@ -8,13 +8,14 @@ import torchvision.transforms as T
 class Detector:
     def __init__(self, model, args, device='cuda'):
         _, self.model = setup_model(model, args, device)
-        self.support_img = ['jpg', 'jpeg', 'png', 'bmp', ]
-        self.support_video = [] # TODO: support video
+        self.support_img = ('jpg', 'jpeg', 'png', 'bmp', )
+        self.support_video = tuple() # TODO: support video
+        self.args = args
+        self.device = device
 
     def predict(self):
         if self.args.compile and hasattr(self.model, "_orig_mod"):
-            self.model = self.model._orig_mod 
-        self.model = self.model.half() if self.args.amp else self.model.float()
+            self.model = self.model._orig_mod
         self.model.eval()
 
         if not os.path.exists(self.args.detect_path):
@@ -43,7 +44,7 @@ class Detector:
             probabilities = torch.softmax(output, dim=1)
             outnum = min(self.args.nc, 5)
             top5_values, top5_indices = torch.topk(probabilities, k=outnum, dim=1)
-            top5_out = [(f'{self.args.nc_name[top5_indices[i].item()]}: {top5_values[i].item():.4f}') for i in range(outnum)]
+            top5_out = [(f'{self.args.nc_name[top5_indices[0][i].item()]}: {top5_values[0][i].item():.4f}') for i in range(outnum)]
         for i in top5_out:
             print(i)
         # TODO: save result to img

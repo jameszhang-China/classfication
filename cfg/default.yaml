@@ -8,14 +8,14 @@ batch_size: 32
 mean: [0.0, 0.0, 0.0]
 std: [1.0, 1.0, 1.0]
 
-#path
-train_path: /home/vera/classfication/datasets
-val_path: /home/vera/classfication/datasets
-detect_path: /home/vera/classfication/datasets
-export_path: /home/vera/classfication/models/export
+# path
+save_dir: ./runs/default/
+train_path: ./datasets
+val_path: ./datasets
+export_path: ./runs/default/
 
-#trainer
-epochs: 10
+#train
+epochs: 50
 lr: 0.001
 weight_decay: 0.0005
 lrf: 0.01
@@ -32,5 +32,12 @@ compile: False
 ema: True
 fitness_w: [0.0,0.5,0.5]
 
+# resume
+# resume: True
+model: ./cfg/resnet18.yaml
 
+# detect
+detect_path: ./datasets/train/car/3.jpg
 
+# export
+export_path: ./runs/default/

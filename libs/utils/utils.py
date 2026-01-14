@@ -14,7 +14,7 @@ def setup_model(model_in, args, device='cuda'):
     if isinstance(model_in, dict):
         if model_in.get('ema', None) is not None and model_in.get('model', None) is not None:
             # check point
-            ckpt = model_in.to(device)
+            ckpt = model_in
         if args.resume:
             model = model_in.get('model', None) if 'model' in model_in else model_in.get('ema', None)
         else:
@@ -22,21 +22,25 @@ def setup_model(model_in, args, device='cuda'):
         if type(model) is ModelEMA:
             model = model.ema
 
-        if isinstance(model_in, dict) and all(isinstance(k, str) and isinstance(v, torch.Tensor) for k, v in model_in.items()):
-            # weights
-            model = ClassificationModel(args.model, device=device)
+        if all(isinstance(k, str) and isinstance(v, torch.Tensor) for k, v in model_in.items()):
+            # weights for model_in
+            model = ClassificationModel(args.model, args, device=device)
             model.load_state_dict(model_in)
             model_in = model
         elif hasattr(model, 'forward') and hasattr(model, 'state_dict'):
             # full model
             model_in = model.to(device)
+        elif all(isinstance(k, str) and isinstance(v, torch.Tensor) for k, v in model.items()):
+            # weights for model
+            model_in = ClassificationModel(args.model, device=device)
+            model_in.load_state_dict(model)
         else:
             raise ValueError('model must be a weight or a model checkpoint')
     elif isinstance(model_in, ClassificationModel):
         pass
     else:
         raise ValueError('model must be checkpoint or ClassificationModel instance')
-    return ckpt, model_in
+    return ckpt, model_in.float().to(device)
 
 def init_seeds(seed=0, deterministic=False):
     random.seed(seed)
@@ -46,7 +50,7 @@ def init_seeds(seed=0, deterministic=False):
     torch.cuda.manual_seed_all(seed)  # for Multi-GPU, exception safe
 
 def attempt_compile(model, device='cuda', imgsz=640, warmup=False, mode=False):
-    if not hasattr(torch, "compile") or not model:
+    if not hasattr(torch, "compile") or not mode:
         return model
     if mode is True:
         mode = "default"

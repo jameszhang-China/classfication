@@ -68,11 +68,11 @@ PyTorch 创建新nn.Conv2d时，weight 默认用kaiming_uniform_（凯明均匀�
 '''
 
 '''
-温度系数：使得率分布会变得更「平滑」，学生更容易拟合（这是温度 T 的作用）；KL 散度的损失值会被缩小 \(T^2\) 倍，损失值会变得特别小，几乎对总损失没有贡献
-乘以 \(T^2\) 的目的：把损失值的量级恢复到原来的大小，让蒸馏损失的权重和学生的分类损失「匹配」，既不会被分类损失淹没，也不会喧宾夺主。
+温度系数：使得率分布会变得更「平滑」，学生更容易拟合（这是温度 T 的作用）；KL 散度的损失值会被缩小 (T^2) 倍，损失值会变得特别小，几乎对总损失没有贡献
+乘以 (T^2) 的目的：把损失值的量级恢复到原来的大小，让蒸馏损失的权重和学生的分类损失「匹配」，既不会被分类损失淹没，也不会喧宾夺主。
 教师禁用 log_softmax：会数值溢出、梯度消失，教师只需要输出稳定的概率分布即可；
 学生必用 log_softmax：梯度更大、训练更高效，完美匹配 KL 散度的数学公式；
-必乘 \(T^2\)：恢复损失量级，保证蒸馏损失的权重合理
+必乘(T^2)：恢复损失量级，保证蒸馏损失的权重合理
 
 学生模型是需要训练、需要梯度回传、需要不断更新参数的，用log_softmax对学生来说有一下好处：
 1：解决梯度消失问题，优化训练效率；log_softmax 相比于 softmax，在反向传播时的梯度表达式更简洁、梯度值更大，能有效避免梯度消失
@@ -115,14 +115,14 @@ class DistillationLoss(nn.Module):
         teacher = self.args.teacher
         if not teacher:
             raise ValueError("Teacher model is not defined")
-        teacher = torch.load(teacher)
+        teacher = torch.load(teacher, map_location=device, weights_only=False)
         if isinstance(teacher, dict):
             model = teacher.get('ema', None) if 'ema' in teacher else teacher.get('model', None)
             if type(model) is ModelEMA:
                 model = model.ema
             if isinstance(teacher, dict) and all(isinstance(k, str) and isinstance(v, torch.Tensor) for k, v in teacher.items()):
                 # weights
-                model = ClassificationModel(self.args.t_model, device=self.device)
+                model = ClassificationModel(self.args.t_model, self.args, device=self.device)
                 model.load_state_dict(teacher)
                 teacher = model
             elif hasattr(model, 'forward') and hasattr(model, 'state_dict'):

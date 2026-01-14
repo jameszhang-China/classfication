@@ -51,21 +51,24 @@ def yaml_model_load(cfg : str):
     return d
 
 class ClassificationModel(nn.Module):
-    def __init__(self, cfg : str, device='cuda'):
+    def __init__(self, cfg : str, args:dict, device='cuda'):
         super(ClassificationModel, self).__init__()
         self.yaml = yaml_model_load(cfg)
         self.model = parse_model(self.yaml, device=device)
+        self.args = args
  
         self.fm = []
         self.device = device
 
     def forward(self, x):
-        self.fm = []
+        fm_local, self.fm = [], [] # 需要使用local fm，否则export报错
         for m in self.model:
             if m.f != -1:
-                x = self.fm[m.f] if isinstance(m.f, int) else [x if j == -1 else self.fm[j] for j in m.f]  # from earlier layers
+                x = fm_local[m.f] if isinstance(m.f, int) else [x if j == -1 else fm_local[j] for j in m.f]  # from earlier layers
             x = m(x)
-            self.fm.append(x.clone().to(self.device))
+            fm_local.append(x.clone().to(self.device))
+        if self.args.distillation:
+            self.fm = fm_local.copy()
         return x
     
     def get_fm(self):

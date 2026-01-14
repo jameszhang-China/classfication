@@ -1,4 +1,4 @@
-nc: 10
+nc: 4
 
 backbone:
 #[from, repeats, module, args]
@@ -12,4 +12,4 @@ backbone:
 head:
  - [-1, 1, nn.AvgPool2d, [7, 1, 0]]
  - [-1, 1, nn.Flatten, [1]]
- - [-1, 1, nn.Linear, [512, 10]]
+ - [-1, 1, nn.Linear, [512, 4]]

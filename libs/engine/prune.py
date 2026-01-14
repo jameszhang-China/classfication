@@ -1,7 +1,7 @@
 from copy import deepcopy
 import torch
 import torch.nn as nn
-import torch_prune as tp
+import torch_pruning as tp
 from libs.utils.utils import setup_model, unwrap_model
 
 class Pruner:
