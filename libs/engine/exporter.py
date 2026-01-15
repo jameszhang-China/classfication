@@ -23,10 +23,7 @@ class Exporter:
             do_constant_folding=True,       # 是否执行常量折叠优化
             input_names=['input'],          # 输入节点名称
             output_names=['output'],        # 输出节点名称
-            dynamic_axes={                  # 动态维度设置
-                'input': {0: 'batch_size'},  # 批次大小动态
-                'output': {0: 'batch_size'}
-            }
+            dynamo=False
         )
         traced_model = torch.jit.trace(self.model, dummy_input)
         traced_model.save(self.args.export_path + "/model.torchscript")
